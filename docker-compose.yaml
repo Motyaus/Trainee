@@ -1,0 +1,80 @@
+services:
+  nginx:
+      image: nginx:latest
+      restart: always
+      container_name: nginx
+      ports:
+        - "80:80"
+        - "443:443"
+      volumes:
+        - ./nginx/nginxconf:/etc/nginx/conf.d
+        - ./nginx/ssl:/etc/nginx/ssl
+        - ./Java-app/front-end/build/:/usr/share/nginx/html:ro
+      depends_on:
+        - backend
+      networks:
+        - app_network
+
+  backend:
+    build:
+      context: .
+      dockerfile: dockerfile_backend
+    container_name: backend
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=java_user
+      - POSTGRES_PASSWORD=1111
+      - POSTGRES_DB=java_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - FLUENTD_ENABLED=false
+      - FLUENTD_HOST=fluentd
+      - FLUENTD_PORT=24224
+      - SERVER_PORT=8081
+      - DEBUG=true
+    ports:
+      - "8081:8081"
+    networks:
+      - app_network
+
+  db:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: java_user
+      POSTGRES_PASSWORD: 1111
+      POSTGRES_DB: java_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+  ngrok:
+    image: ngrok_abobus
+    networks:
+      - app_network
+    command: ["start", "--config", "/etc/ngrok.yml", "myapp"]
+    ports:
+      - "4040:4040"
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+  redis_data:
+
